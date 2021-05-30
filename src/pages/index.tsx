@@ -1,7 +1,8 @@
+/* eslint-disable import/no-extraneous-dependencies */
+/* eslint-disable @typescript-eslint/explicit-function-return-type */
 import { Button, Box } from '@chakra-ui/react';
 import { useMemo } from 'react';
 import { useInfiniteQuery } from 'react-query';
-
 import { Header } from '../components/Header';
 import { CardList } from '../components/CardList';
 import { api } from '../services/api';
@@ -9,6 +10,14 @@ import { Loading } from '../components/Loading';
 import { Error } from '../components/Error';
 
 export default function Home(): JSX.Element {
+  const fetchImages = ({ pageParam = 6 || null }): any =>
+    api
+      .get('api/images', {
+        params: {
+          after: pageParam,
+        },
+      })
+      .then(response => response.data);
   const {
     data,
     isLoading,
@@ -18,18 +27,36 @@ export default function Home(): JSX.Element {
     hasNextPage,
   } = useInfiniteQuery(
     'images',
-    // TODO AXIOS REQUEST WITH PARAM
-    ,
-    // TODO GET AND RETURN NEXT PAGE PARAM
+    fetchImages,
+    /* async ({ pageParam = null }) => {
+      if (pageParam !== null) {
+        return await api.get(`/api/images/`, {
+          params: {
+            after: pageParam,
+          },
+        });
+      }
+
+      return await api.get(`/api/images/`);
+    }, */
+    {
+      getNextPageParam: (lastPage, pages) => lastPage.after,
+    }
   );
 
   const formattedData = useMemo(() => {
-    // TODO FORMAT AND FLAT DATA ARRAY
+    const newData = data?.pages.map(item => item.data);
+
+    return newData?.flat();
   }, [data]);
 
-  // TODO RENDER LOADING SCREEN
+  if (isError) {
+    return <Error />;
+  }
 
-  // TODO RENDER ERROR SCREEN
+  if (isLoading) {
+    return <Loading />;
+  }
 
   return (
     <>
@@ -37,7 +64,11 @@ export default function Home(): JSX.Element {
 
       <Box maxW={1120} px={20} mx="auto" my={20}>
         <CardList cards={formattedData} />
-        {/* TODO RENDER LOAD MORE BUTTON IF DATA HAS NEXT PAGE */}
+        {hasNextPage && (
+          <Button mt={40} onClick={() => fetchNextPage()}>
+            {isFetchingNextPage ? 'Carregando...' : 'Carregar mais'}
+          </Button>
+        )}
       </Box>
     </>
   );
